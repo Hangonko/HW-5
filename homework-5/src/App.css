@@ -32,3 +32,9 @@ body {
 .users {
   margin-top: 10px;
 }
+
+.errMessage {
+  color: red;
+  font-size: 14px;
+  margin-top: 5px;
+}
