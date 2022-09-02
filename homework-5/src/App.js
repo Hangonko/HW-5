@@ -5,7 +5,7 @@ import axios from "axios";
 
 const App = () => {
   const initValues = {
-    userName: "",
+    firstName: "",
     lastName: "",
     email: "",
     age: "",
@@ -15,6 +15,7 @@ const App = () => {
   const [errors, setErrors] = useState({});
   const [isSubmited, setIsSubmited] = useState(false);
   const [users, setUsers] = useState([]);
+  const [formValid, isFormValid] = useState(false);
 
   const id = new Date().valueOf();
 
@@ -22,15 +23,6 @@ const App = () => {
     console.log(errors);
     console.log(userValues);
   }, [errors]);
-
-  useEffect(() => {
-    const getData = async () => {
-      const { data } = await axios.get("http://localhost:3001/users");
-      setUsers(data.data);
-      console.log(data);
-    };
-    getData();
-  }, []);
 
   const handleOnChange = (e) => {
     const { name, value } = e.target;
@@ -49,66 +41,96 @@ const App = () => {
     } else {
       await axios.post("http://localhost:3001/users/", userValues);
     }
-    const { data } = await axios.get("http://localhost:3001/users/");
+    const { data } = await axios.get("http://localhost:3001/users");
+    setUsers((prev) => {
+      return [...prev, { ...userValues }];
+    });
     setUsers(data.data);
     setUserValues(initValues);
     setIsSubmited(false);
+    formValid(true);
   };
+
+  useEffect(() => {
+    const getData = async () => {
+      const { data } = await axios.get("http://localhost:3001/users");
+      setUsers(data.data);
+      console.log(data);
+    };
+    getData();
+  }, []);
+
+  useEffect(() => {
+    const ValidResults = validate(userValues);
+    setErrors(ValidResults);
+    if (
+      userValues.firstName &&
+      !ValidResults.firstName &&
+      userValues.lastName &&
+      !ValidResults.lastName &&
+      userValues.age &&
+      !ValidResults.age &&
+      userValues.email &&
+      !ValidResults.email
+    ) {
+      isFormValid(true);
+    } else {
+      isFormValid(false);
+    }
+  }, [userValues]);
 
   const validate = (values) => {
     const errs = {};
-    if (values.userName && values.userName.length < 4) {
-      errs.userName = "სახელი უნდა შეიცავდეს მინუმუ 4 ასოს";
-    } else if (!values.userName) {
-      errs.userName = "შეიყვანეთ თქვენი სახელი";
+    if (values.firstName && values.firstName.length < 4) {
+      errs.firstName = "სახელი უნდა შეიცავდეს მინუმუ 4 ასოს";
     }
 
     if (values.lastName && values.lastName.length < 4) {
       errs.lastName = "გვარი უნდა შეიცავდეს მინიმუ 4 ასოს";
-    } else if (!values.lastName) {
-      errs.lastName = "შეიყვანეთ თქვენი გვარი";
     }
 
     if (values.email && !values.email.includes("@gmail.com")) {
       errs.email = "მეილი უნდა შეიცავდეს @gmail.com";
-    } else if (!values.email) {
-      errs.email = "შეიყვანეთ თქვენი მეილი";
     }
 
     if (values.age && !(values.age >= 18)) {
       errs.age = "ასაკი უნდა აღემატებოდეს 18 წელს ";
-    } else if (!values.age) {
-      errs.age = "შეიყვანეთ თქვენი ასაკი";
     }
 
     return errs;
   };
 
-  // const deleteUser = (id) => {
-  //   setUsers((prev) => {
-  //     const filterUsers = prev.filter((user) => user.id !== id);
-  //     return filterUsers;
-  //   });
-  // };
+  const deleteUser = async (id) => {
+    await axios.delete(`http://localhost:3001/users/${id}`);
+    const { data } = await axios.get("http://localhost:3001/users");
+    setUsers(data.data);
+    console.log("data", data);
+  };
 
-  // const updateUser = (userID) => {
-  //   setUsers((prev) => {
-  //     // const findx = prev.findIndex((user) => user.userID === userID);
-  //     // return newArr;
-  //   });
-  // };
+  const updateUser = (id) => {
+    const user = users.find((user) => user._id === id);
+    setUserValues({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      age: user.age,
+      email: user.email,
+      sex: user.sex,
+      id: id,
+    });
+  };
 
   return (
     <>
+      <pre>{JSON.stringify(userValues, undefined, 2)}</pre>
       <form action="submit" onSubmit={handleOnSubmit}>
         <input
-          name="userName"
-          value={userValues.userName}
-          placeholder="Username"
+          name="firstName"
+          value={userValues.firstName}
+          placeholder="firstName"
           onChange={handleOnChange}
           className="inputs"
         />
-        <p className="errMessage">{errors.userName}</p>
+        <p className="errMessage">{errors.firstName}</p>
         <input
           name="lastName"
           value={userValues.lastName}
@@ -148,16 +170,28 @@ const App = () => {
         <button className="button">Add</button>
       </form>
       {users.map((user) => {
-        const { userName, lastName, email, age, sex } = user;
+        const { firstName, lastName, email, age, sex } = user;
         return (
-          <div className="users">
-            <p>{userName}</p>
+          <div className="users" key={user._id}>
+            <p>{firstName}</p>
             <p>{lastName}</p>
             <p>{email}</p>
             <p>{age}</p>
             <p>{sex}</p>
-            <button>Remove</button>
-            <button>Edit</button>
+            <button
+              onClick={() => {
+                deleteUser(user._id);
+              }}
+            >
+              Remove
+            </button>
+            <button
+              onClick={() => {
+                updateUser(user._id);
+              }}
+            >
+              Edit
+            </button>
           </div>
         );
       })}
